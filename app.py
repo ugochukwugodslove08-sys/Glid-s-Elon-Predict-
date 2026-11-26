@@ -142,7 +142,7 @@ def fetch_events():
         params={
             "active": "true",
             "closed": "false",
-            "limit": 500
+            "limit": 100
         },
         timeout=20
     )
