@@ -834,4 +834,4 @@ with tab4:
                             str(row["market_start"]),
                             int(row["day_no"]),
                             int(row["count"])
-          
+)
