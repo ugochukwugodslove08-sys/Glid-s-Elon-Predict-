@@ -1,8 +1,7 @@
-
 import json
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -81,6 +80,56 @@ def history_frame():
     )
 
     return pd.DataFrame(response.data or [])
+
+
+def collected_post_counts(market_start, cutoff_hour):
+    """Count distinct collected posts in seven WAT market-day bins."""
+    start_local = datetime.combine(
+        market_start,
+        datetime.min.time(),
+        tzinfo=WAT
+    ).replace(hour=int(cutoff_hour))
+    end_local = start_local + timedelta(days=7)
+
+    start_utc = start_local.astimezone(timezone.utc).isoformat()
+    end_utc = end_local.astimezone(timezone.utc).isoformat()
+
+    response = (
+        supabase.table("elon_posts")
+        .select("post_id,posted_at")
+        .gte("posted_at", start_utc)
+        .lt("posted_at", end_utc)
+        .range(0, 9999)
+        .execute()
+    )
+
+    daily = {}
+    seen = set()
+
+    for row in response.data or []:
+        post_id = str(row.get("post_id") or "")
+        posted_at = row.get("posted_at")
+        if not post_id or not posted_at or post_id in seen:
+            continue
+
+        try:
+            timestamp = datetime.fromisoformat(
+                str(posted_at).replace("Z", "+00:00")
+            )
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            local_timestamp = timestamp.astimezone(WAT)
+            day_no = int(
+                (local_timestamp - start_local).total_seconds() // 86400
+            ) + 1
+        except (TypeError, ValueError):
+            continue
+
+        if 1 <= day_no <= 7:
+            daily[day_no] = daily.get(day_no, 0) + 1
+            seen.add(post_id)
+
+    return daily
 
 
 # ==================================================
@@ -343,7 +392,7 @@ else:
     cur = pd.DataFrame()
 
 
-counts = (
+manual_counts = (
     {
         int(row.day_no): int(row.count)
         for row in cur.itertuples()
@@ -352,6 +401,20 @@ counts = (
     else {}
 )
 
+try:
+    automatic_counts = collected_post_counts(market_start, cutoff_hour)
+except Exception as exc:
+    automatic_counts = {}
+    st.warning(
+        "Automatic post counts could not be loaded from elon_posts. "
+        "Showing manually saved counts instead. "
+        f"Database detail: {exc}"
+    )
+
+# Prefer collected post data whenever this market window has any posts.
+# Keep manual daily counts as a fallback for older windows or data gaps.
+counts = automatic_counts if automatic_counts else manual_counts
+count_source = "Automatically collected posts" if automatic_counts else "Manually saved counts"
 total = sum(counts.values())
 
 
@@ -375,6 +438,7 @@ tab1, tab2, tab3, tab4 = st.tabs(
 
 with tab1:
     st.subheader("Current market overview")
+    st.caption(f"Count source: {count_source} · {cutoff_hour}:00 WAT cutoff")
 
     col1, col2, col3 = st.columns(3)
 
@@ -440,12 +504,18 @@ with tab1:
 # ==================================================
 
 with tab2:
-    st.subheader("Record daily tweet counts")
+    st.subheader("Daily tweet counts")
 
-    st.write(
-        "Enter the number of eligible posts in each "
-        "completed market-day bin."
-    )
+    if automatic_counts:
+        st.success(
+            "These counts are calculated automatically from collected Elon posts. "
+            "Manual entry remains available when no collected posts exist for this window."
+        )
+    else:
+        st.write(
+            "No collected posts were found for this market window. "
+            "You can enter daily counts manually below."
+        )
 
     entered = {}
 
@@ -764,30 +834,4 @@ with tab4:
                             str(row["market_start"]),
                             int(row["day_no"]),
                             int(row["count"])
-                        )
-
-                        imported += 1
-
-                    st.success(
-                        f"Imported {imported} records."
-                    )
-
-                    st.rerun()
-
-        except Exception:
-            st.error(
-                "Could not read or import the CSV file. "
-                "Check its columns and values."
-            )
-
-
-# ==================================================
-# FOOTER
-# ==================================================
-
-st.divider()
-
-st.caption(
-    "Glid's Elon Predict · Tweet-count intelligence · "
-    "Data stored in Supabase · WAT (Africa/Lagos)"
-    )
+          
