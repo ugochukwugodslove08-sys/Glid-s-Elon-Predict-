@@ -6,51 +6,29 @@ from pathlib import Path
 import pandas as pd
 import requests
 import streamlit as st
-
+from supabase import create_client
 APP_DIR = Path(__file__).parent
 DB_PATH = Path("/tmp/elon_predict.db")
 WAT = ZoneInfo("Africa/Lagos")
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
-
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="Elon Predict AI", page_icon="📈", layout="wide")
 
-def db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""CREATE TABLE IF NOT EXISTS daily_counts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        market_type TEXT NOT NULL,
-        market_start TEXT NOT NULL,
-        day_no INTEGER NOT NULL,
-        count INTEGER NOT NULL,
-        recorded_at TEXT NOT NULL,
-        UNIQUE(market_type, market_start, day_no)
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS market_snapshots (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        captured_at TEXT NOT NULL,
-        event_title TEXT,
-        market_question TEXT,
-        yes_price REAL,
-        token_id TEXT
-    )""")
-    conn.commit()
-    return conn
-
 def save_count(market_type, market_start, day_no, count):
-    conn = db()
-    conn.execute("""INSERT INTO daily_counts(market_type, market_start, day_no, count, recorded_at)
-        VALUES(?,?,?,?,?) ON CONFLICT(market_type, market_start, day_no)
-        DO UPDATE SET count=excluded.count, recorded_at=excluded.recorded_at""",
-        (market_type, market_start, int(day_no), int(count), datetime.now(timezone.utc).isoformat()))
-    conn.commit()
-    conn.close()
+    supabase.table("daily_counts").upsert({
+        "market_type": market_type,
+        "market_start": str(market_start),
+        "day_no": int(day_no),
+        "count": int(count),
+        "recorded_at": datetime.now(timezone.utc).isoformat()
+    }, on_conflict="market_type,market_start,day_no").execute()
 
 def history_frame():
-    conn = db()
-    df = pd.read_sql_query("SELECT * FROM daily_counts ORDER BY market_start, day_no", conn)
-    conn.close()
-    return df
+    response = supabase.table("daily_counts").select("*").order("market_start").order("day_no").execute()
+    return pd.DataFrame(response.data or [])
 
 def fetch_events():
     # Public Gamma endpoint; no trading credentials required.
