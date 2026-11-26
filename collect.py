@@ -8,7 +8,7 @@ from datetime import timezone
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 
-RSS_URL = "https://fxtwitter.com/elonmusk/feed.xml"
+RSS_URL = "https://fixupx.com/elonmusk/feed.xml"
 
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
