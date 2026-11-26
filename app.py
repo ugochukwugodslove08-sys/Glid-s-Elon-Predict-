@@ -820,23 +820,18 @@ with tab4:
                 )
 
                 if st.button("Import records"):
-    imported = 0
+                    imported = 0
 
-    for row in incoming.to_dict("records"):
-        if row["market_type"] not in [
-            "Tuesday-to-Tuesday",
-            "Friday-to-Friday"
-        ]:
-            continue
+                    for row in incoming.to_dict("records"):
+                        if row["market_type"] not in [
+                            "Tuesday-to-Tuesday",
+                            "Friday-to-Friday"
+                        ]:
+                            continue
 
-        save_count(
-            row["market_type"],
-            str(row["market_start"]),
-            int(row["day_no"]),
-            int(row["count"])
-        )
-
-        imported += 1
-
-    st.success(f"Imported {imported} records.")
-    st.rerun()
+                        save_count(
+                            row["market_type"],
+                            str(row["market_start"]),
+                            int(row["day_no"]),
+                            int(row["count"])
+          
