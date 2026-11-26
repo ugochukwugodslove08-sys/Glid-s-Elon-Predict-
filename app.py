@@ -146,7 +146,7 @@ with tab1:
 with tab2:
     st.subheader("Record daily tweet counts")
     st.write("Enter the number of eligible posts in each completed market-day bin. Use the same counting convention as the market's resolution rules.")
-        entered = {}
+    entered = {}
     for i in range(1, 8):
         entered[i] = st.number_input(
             f"Day {i}",
