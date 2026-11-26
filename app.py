@@ -146,17 +146,22 @@ with tab1:
 with tab2:
     st.subheader("Record daily tweet counts")
     st.write("Enter the number of eligible posts in each completed market-day bin. Use the same counting convention as the market's resolution rules.")
-    cols = st.columns(4)
-    entered = {}
-    for i in range(1,8):
-        with cols[(i-1)%4]:
-            entered[i] = st.number_input(f"Day {i}", min_value=0, max_value=2000, value=counts.get(i,0), step=1, key=f"count_{i}_{market_type}_{start_key}")
-    if st.button("Save daily counts", type="primary"):
-        for day, count in entered.items():
-            if count > 0 or day in counts:
-                save_count(market_type, start_key, day, count)
-        st.success("Counts saved to the local database.")
-        st.rerun()
+        entered = {}
+    for i in range(1, 8):
+        entered[i] = st.number_input(
+            f"Day {i}",
+            min_value=0,
+            max_value=2000,
+            value=counts.get(i, 0),
+            step=1,
+            key=f"count_{i}_{market_type}_{start_key}"
+        )
+        if st.button("Save daily counts", type="primary"):
+            for day, count in entered.items():
+                if count > 0 or day in counts:
+                    save_count(market_type, start_key, day, count)
+            st.success("Counts saved to the local database.")
+            st.rerun()
     st.caption("Zero is treated as a valid count if you save an existing day. Blank future days should remain zero until observed.")
 
 with tab3:
