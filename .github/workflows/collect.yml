@@ -3,7 +3,7 @@ name: Daily Elon Post Collection
 
 on:
   schedule:
-    - cron: "0 17 * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
