@@ -790,48 +790,61 @@ with tab4:
     )
 
     upload = st.file_uploader(
-        "Upload historical counts CSV",
-        type=["csv"]
-    )
-
-    if upload is not None:
-        try:
-            incoming = pd.read_csv(upload)
-
-            required = {
-                "market_type",
-                "market_start",
-                "day_no",
-                "count"
-            }
-
-            if not required.issubset(incoming.columns):
-                missing = required - set(incoming.columns)
-
-                st.error(
-                    "Missing columns: "
-                    + ", ".join(sorted(missing))
-                )
-
-            else:
-                st.dataframe(
-                    incoming.head(20),
-                    use_container_width=True
-                )
-
-                if st.button("Import records"):
-                    imported = 0
-
-                    for row in incoming.to_dict("records"):
-                        if row["market_type"] not in [
-                            "Tuesday-to-Tuesday",
-                            "Friday-to-Friday"
-                        ]:
-                            continue
-
-                        save_count(
-                            row["market_type"],
-                            str(row["market_start"]),
-                            int(row["day_no"]),
-                            int(row["count"])
+    "Upload historical counts CSV",
+    type=["csv"]
 )
+
+if upload is not None:
+    try:
+        incoming = pd.read_csv(upload)
+
+        required = {
+            "market_type",
+            "market_start",
+            "day_no",
+            "count"
+        }
+
+        if not required.issubset(incoming.columns):
+            missing = required - set(incoming.columns)
+            st.error(
+                "Missing columns: "
+                + ", ".join(sorted(missing))
+            )
+
+        else:
+            st.dataframe(
+                incoming.head(20),
+                use_container_width=True
+            )
+
+            if st.button("Import records"):
+                imported = 0
+
+                for row in incoming.to_dict("records"):
+                    if row["market_type"] not in [
+                        "Tuesday-to-Tuesday",
+                        "Friday-to-Friday"
+                    ]:
+                        continue
+
+                    save_count(
+                        row["market_type"],
+                        str(row["market_start"]),
+                        int(row["day_no"]),
+                        int(row["count"])
+                    )
+
+                    imported += 1
+
+                st.success(
+                    f"Imported {imported} records successfully."
+                )
+
+                st.rerun()
+
+    except Exception as exc:
+        st.error(
+            f"Could not read or import CSV: {exc}. "
+            "Check its columns and values."
+                        )
