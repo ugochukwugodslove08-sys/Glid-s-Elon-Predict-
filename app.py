@@ -8,7 +8,7 @@ import requests
 import streamlit as st
 
 APP_DIR = Path(__file__).parent
-DB_PATH = APP_DIR / "data" / "elon_predict.db"
+DB_PATH = Path("/tmp/elon_predict.db")
 WAT = ZoneInfo("Africa/Lagos")
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
